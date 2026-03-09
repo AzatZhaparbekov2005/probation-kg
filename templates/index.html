@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Департамент пробации КР</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+.save-badge{position:fixed;bottom:24px;right:24px;background:#22c55e;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(34,197,94,.4);opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;pointer-events:none}
+.save-badge.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div id="app" style="display:flex;min-height:100vh;">
+
+<!-- SIDEBAR -->
+<nav class="sidebar" style="width:272px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;">
+  <div class="sidebar-brand">
+    <div class="brand-emblem">⚖️</div>
+    <div>
+      <div class="brand-name">Пробация КР</div>
+      <div class="brand-sub">База данных</div>
+    </div>
+  </div>
+
+  <div class="nav-group-label">Персонал · Учёт</div>
+  <button class="nav-item active" onclick="show('employees',this,'Сотрудники','Персонал · Учёт')">
+    <span class="nav-icon">👤</span> Сотрудники <span class="nav-count" id="cnt-employees">—</span>
+  </button>
+  <button class="nav-item" onclick="show('departments',this,'Структура отделов','Персонал · Учёт')">
+    <span class="nav-icon">🏛️</span> Структура отделов <span class="nav-count" id="cnt-departments">—</span>
+  </button>
+  <button class="nav-item" onclick="show('clients',this,'Подопечные','Персонал · Учёт')">
+    <span class="nav-icon">📋</span> Подопечные <span class="nav-count" id="cnt-clients">—</span>
+  </button>
+  <button class="nav-item" onclick="show('events',this,'Мероприятия','Персонал · Учёт')">
+    <span class="nav-icon">📅</span> Мероприятия <span class="nav-count" id="cnt-events">—</span>
+  </button>
+
+  <div class="nav-group-label">Взаимодействие</div>
+  <button class="nav-item" onclick="show('partners',this,'Партнёрские организации','Взаимодействие')">
+    <span class="nav-icon">🤝</span> Партнёры <span class="nav-count" id="cnt-partners">—</span>
+  </button>
+
+  <div class="nav-group-label">Документы · Ресурсы</div>
+  <button class="nav-item" onclick="show('normdocs',this,'Нормативные документы','Документы · Ресурсы')">
+    <span class="nav-icon">📄</span> Норм. документы <span class="nav-count" id="cnt-normdocs">—</span>
+  </button>
+  <button class="nav-item" onclick="show('appeals',this,'Обращения граждан','Документы · Ресурсы')">
+    <span class="nav-icon">📨</span> Обращения <span class="nav-count" id="cnt-appeals">—</span>
+  </button>
+  <button class="nav-item" onclick="show('mto',this,'МТО','Документы · Ресурсы')">
+    <span class="nav-icon">🗄️</span> МТО <span class="nav-count" id="cnt-mto">—</span>
+  </button>
+
+  <div class="nav-group-label">Мониторинг</div>
+  <button class="nav-item" onclick="show('monitoring',this,'Карта мониторинга','Мониторинг')">
+    <span class="nav-icon">🗺️</span> Карта мониторинга
+  </button>
+
+  <div class="sidebar-footer">
+    <a href="/logout" style="display:block;width:100%;margin-bottom:10px;padding:7px;background:transparent;border:1px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.5);font-size:11px;text-align:center;text-decoration:none;">🚪 Выйти</a>
+    <div class="sidebar-footer-text">Департамент пробации<br>Кыргызской Республики</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden;">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-breadcrumb" id="breadcrumb">Персонал · Учёт</div>
+      <div class="topbar-title" id="pageTitle">Сотрудники</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-user">👤 admin</div>
+    </div>
+  </header>
+
+  <div class="content" style="flex:1;overflow-y:auto;overflow-x:hidden;">
+
+    <!-- СОТРУДНИКИ -->
+    <div class="section active" id="sec-employees">
+      <div class="section-header">
+        <div><div class="section-title">Сотрудники</div><div class="section-desc">Реестр сотрудников департамента</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('employees')">＋ Добавить</button>
+          <div class="total-pill" id="employees-total">—</div>
+        </div>
+      </div>
+      <div class="search-wrap"><input class="search-input" placeholder="🔍 Поиск..." oninput="searchTable('employees',this.value)"></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>ФИО</th><th>Должность</th><th>Отдел</th><th>Телефон</th><th>Email</th><th>Стаж</th><th>Действия</th>
+      </tr></thead><tbody id="employees-body"></tbody></table></div>
+    </div>
+
+    <!-- ОТДЕЛЫ -->
+    <div class="section" id="sec-departments">
+      <div class="section-header">
+        <div><div class="section-title">Структура отделов</div><div class="section-desc">Организационная структура</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('departments')">＋ Добавить</button>
+          <div class="total-pill" id="departments-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Название</th><th>Руководитель</th><th>Сотрудников</th><th>Телефон</th><th>Адрес</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="departments-body"></tbody></table></div>
+    </div>
+
+    <!-- ПОДОПЕЧНЫЕ -->
+    <div class="section" id="sec-clients">
+      <div class="section-header">
+        <div><div class="section-title">Подопечные</div><div class="section-desc">Реестр лиц на пробационном учёте</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('clients')">＋ Добавить</button>
+          <div class="total-pill" id="clients-total">—</div>
+        </div>
+      </div>
+      <div class="search-wrap"><input class="search-input" placeholder="🔍 Поиск по имени, категории..." oninput="searchTable('clients',this.value)"></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>ФИО</th><th>Год рожд.</th><th>Категория</th><th>С</th><th>По</th><th>Инспектор</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="clients-body"></tbody></table></div>
+    </div>
+
+    <!-- МЕРОПРИЯТИЯ -->
+    <div class="section" id="sec-events">
+      <div class="section-header">
+        <div><div class="section-title">Мероприятия</div><div class="section-desc">Журнал мероприятий</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('events')">＋ Добавить</button>
+          <div class="total-pill" id="events-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Мероприятие</th><th>Дата</th><th>Тип</th><th>Организатор</th><th>Участников</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="events-body"></tbody></table></div>
+    </div>
+
+    <!-- ПАРТНЁРЫ -->
+    <div class="section" id="sec-partners">
+      <div class="section-header">
+        <div><div class="section-title">Партнёрские организации</div><div class="section-desc">Реестр партнёров</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('partners')">＋ Добавить</button>
+          <div class="total-pill" id="partners-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Организация</th><th>Тип</th><th>Контакт</th><th>Телефон</th><th>Направление</th><th>С года</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="partners-body"></tbody></table></div>
+    </div>
+
+    <!-- НОРМ. ДОКУМЕНТЫ -->
+    <div class="section" id="sec-normdocs">
+      <div class="section-header">
+        <div><div class="section-title">Нормативные документы</div><div class="section-desc">Реестр документов</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('normdocs')">＋ Добавить</button>
+          <div class="total-pill" id="normdocs-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Название</th><th>Номер</th><th>Дата</th><th>Тип</th><th>Орган</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="normdocs-body"></tbody></table></div>
+    </div>
+
+    <!-- ОБРАЩЕНИЯ -->
+    <div class="section" id="sec-appeals">
+      <div class="section-header">
+        <div><div class="section-title">Обращения граждан</div><div class="section-desc">Журнал обращений</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('appeals')">＋ Добавить</button>
+          <div class="total-pill" id="appeals-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Заявитель</th><th>Дата</th><th>Тип</th><th>Описание</th><th>Инспектор</th><th>Статус</th><th>Действия</th>
+      </tr></thead><tbody id="appeals-body"></tbody></table></div>
+    </div>
+
+    <!-- МТО -->
+    <div class="section" id="sec-mto">
+      <div class="section-header">
+        <div><div class="section-title">МТО</div><div class="section-desc">Материально-технические ресурсы</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-add" onclick="openModal('mto')">＋ Добавить</button>
+          <div class="total-pill" id="mto-total">—</div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Наименование</th><th>Категория</th><th>Кол-во</th><th>Ед.</th><th>Состояние</th><th>Место</th><th>Действия</th>
+      </tr></thead><tbody id="mto-body"></tbody></table></div>
+    </div>
+
+    <!-- КАРТА -->
+    <div class="section" id="sec-monitoring">
+      <div class="section-header">
+        <div><div class="section-title">Карта мониторинга</div><div class="section-desc">Расположение подопечных по 7 областям КР</div></div>
+        <div class="total-pill" id="mon-total">—</div>
+      </div>
+      <div class="mon-stats">
+        <div class="mon-stat"><div class="mon-stat-n" id="mon-all">—</div><div class="mon-stat-l">На учёте</div></div>
+        <div class="mon-stat"><div class="mon-stat-n" id="mon-active">—</div><div class="mon-stat-l">Активных</div></div>
+        <div class="mon-stat"><div class="mon-stat-n" id="mon-done">—</div><div class="mon-stat-l">Завершено</div></div>
+        <div class="mon-stat"><div class="mon-stat-n">7</div><div class="mon-stat-l">Областей КР</div></div>
+      </div>
+      <div class="map-wrap" id="mapContainer" style="height:560px;">
+        <div id="leafletMap" style="width:100%;height:100%;z-index:1;"></div>
+        <div class="map-legend" style="z-index:1000;">
+          <div style="font-size:10px;font-weight:700;color:var(--navy);margin-bottom:8px;letter-spacing:.5px">ОБОЗНАЧЕНИЯ</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#22c55e;border:2px solid #fff;box-shadow:0 0 0 1px #22c55e"></div><span style="font-size:11.5px">Активный</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;border:2px solid #fff;box-shadow:0 0 0 1px #94a3b8"></div><span style="font-size:11.5px">Завершён</span></div>
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <div class="sec-divider">Распределение по регионам</div>
+        <div class="region-list" id="regionList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+<div class="modal" id="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="modalTitle">Запись</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body" id="modalBody"></div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+    <button class="btn-save" onclick="saveRecord()">Сохранить</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="save-badge" id="saveBadge">💾 Сохранено</div>
+
+<script src="{{ url_for('static', filename='js/locations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
